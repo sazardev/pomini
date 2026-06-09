@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pomini</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=General+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-state="idle" data-theme="mono">
+
+  <!-- Titlebar -->
+  <div id="titlebar">
+    <div id="titlebar-drag" class="drag-region">
+      <span id="titlebar-label">pomini</span>
+    </div>
+    <div id="titlebar-controls">
+      <button id="btn-compact" class="tb-btn" title="Compact mode">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button id="btn-pin" class="tb-btn" title="Pin / Always on top">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v10l-4 4v2h8v-2l-4-4V2"/><line x1="12" y1="2" x2="12" y2="2"/><circle cx="12" cy="18" r="2"/><path d="M10.5 7.5h3"/></svg>
+      </button>
+      <button id="btn-minimize" class="tb-btn" title="Minimize">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button id="btn-close" class="tb-btn tb-btn-close" title="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div id="app">
+    <!-- State indicator -->
+    <div id="state-indicator">
+      <span id="state-dot"></span>
+      <span id="state-label">Ready</span>
+    </div>
+
+    <!-- Timer -->
+    <div id="timer-container">
+      <svg id="timer-ring" viewBox="0 0 200 200">
+        <circle class="timer-ring-bg" cx="100" cy="100" r="90"/>
+        <circle class="timer-ring-progress" cx="100" cy="100" r="90"/>
+      </svg>
+      <div id="timer-display">25:00</div>
+    </div>
+
+    <!-- Phrase -->
+    <div id="phrase-container">
+      <p id="phrase-text">Ready to focus?</p>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+      <button id="btn-start" class="btn-primary">Start</button>
+      <button id="btn-skip" class="btn-secondary">Skip</button>
+    </div>
+
+    <!-- Session counter -->
+    <div id="session-counter">
+      <span id="session-count">0</span> sessions today
+    </div>
+
+    <!-- Settings toggle -->
+    <button id="btn-settings" class="icon-btn" title="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <!-- Settings panel (hidden by default) -->
+  <div id="settings-panel" class="panel-hidden">
+    <div id="settings-header">
+      <h2>Settings</h2>
+      <button id="btn-settings-close" class="icon-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div id="settings-content">
+      <!-- Durations -->
+      <div class="setting-group">
+        <label class="setting-label">Durations (minutes)</label>
+        <div class="setting-row">
+          <span>Focus</span>
+          <input type="number" id="set-focus" min="1" max="120" value="25">
+        </div>
+        <div class="setting-row">
+          <span>Short Break</span>
+          <input type="number" id="set-short-break" min="1" max="30" value="5">
+        </div>
+        <div class="setting-row">
+          <span>Long Break</span>
+          <input type="number" id="set-long-break" min="1" max="60" value="15">
+        </div>
+        <div class="setting-row">
+          <span>Sessions before long break</span>
+          <input type="number" id="set-sessions-before-long" min="1" max="10" value="4">
+        </div>
+      </div>
+
+      <!-- Theme -->
+      <div class="setting-group">
+        <label class="setting-label">Theme</label>
+        <div id="theme-options">
+          <button class="theme-chip active" data-theme="mono">Mono</button>
+          <button class="theme-chip" data-theme="sepia">Sepia</button>
+          <button class="theme-chip" data-theme="slate">Slate</button>
+          <button class="theme-chip" data-theme="amber">Amber</button>
+          <button class="theme-chip" data-theme="verde">Verde</button>
+          <button class="theme-chip" data-theme="rose">Rose</button>
+          <button class="theme-chip" data-theme="ocean">Ocean</button>
+        </div>
+      </div>
+
+      <!-- Behavior -->
+      <div class="setting-group">
+        <label class="setting-label">Behavior</label>
+        <div class="setting-row checkbox-row">
+          <span>Auto-start breaks</span>
+          <input type="checkbox" id="set-auto-start-breaks" checked>
+        </div>
+        <div class="setting-row checkbox-row">
+          <span>Auto-start focus</span>
+          <input type="checkbox" id="set-auto-start-focus">
+        </div>
+        <div class="setting-row checkbox-row">
+          <span>Notifications</span>
+          <input type="checkbox" id="set-notifications" checked>
+        </div>
+        <div class="setting-row checkbox-row">
+          <span>Sound alerts</span>
+          <input type="checkbox" id="set-sound" checked>
+        </div>
+        <div class="setting-row checkbox-row">
+          <span>Dim when pinned & focusing</span>
+          <input type="checkbox" id="set-dim-on-focus" checked>
+        </div>
+      </div>
+
+      <!-- Opacity -->
+      <div class="setting-group">
+        <label class="setting-label">Opacity</label>
+        <div class="setting-row">
+          <span>Idle</span>
+          <input type="range" id="set-opacity-idle" min="0.3" max="1" step="0.05" value="1">
+        </div>
+        <div class="setting-row">
+          <span>Focus (dimmed)</span>
+          <input type="range" id="set-opacity-focus" min="0.2" max="1" step="0.05" value="0.4">
+        </div>
+        <div class="setting-row">
+          <span>Break</span>
+          <input type="range" id="set-opacity-break" min="0.3" max="1" step="0.05" value="1">
+        </div>
+      </div>
+
+      <!-- Position -->
+      <div class="setting-group">
+        <label class="setting-label">Window Position</label>
+        <div id="position-options">
+          <button class="pos-chip" data-pos="top-left">↖ TL</button>
+          <button class="pos-chip" data-pos="top-center">↑ TC</button>
+          <button class="pos-chip active" data-pos="top-right">↗ TR</button>
+          <button class="pos-chip" data-pos="bottom-left">↙ BL</button>
+          <button class="pos-chip" data-pos="bottom-center">↓ BC</button>
+          <button class="pos-chip" data-pos="bottom-right">↘ BR</button>
+          <button class="pos-chip" data-pos="center">⊙ C</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="setting-group">
+        <label class="setting-label">Stats</label>
+        <div id="stats-container">
+          <div class="stat-row"><span>Today</span><span id="stat-today">0</span></div>
+          <div class="stat-row"><span>This week</span><span id="stat-week">0</span></div>
+          <div class="stat-row"><span>Total</span><span id="stat-total">0</span></div>
+          <div class="stat-row"><span>Streak (days)</span><span id="stat-streak">0</span></div>
+        </div>
+        <button id="btn-clear-history" class="btn-secondary btn-small">Clear history</button>
+      </div>
+
+      <button id="btn-reset-settings" class="btn-secondary">Reset to defaults</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
