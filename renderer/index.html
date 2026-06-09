@@ -54,6 +54,15 @@
       <p id="phrase-text">Ready to focus?</p>
     </div>
 
+    <!-- Task & Goal -->
+    <div id="task-container">
+      <input type="text" id="task-input" placeholder="What are you working on?" maxlength="80">
+      <div id="goal-bar-container">
+        <div id="goal-bar"><div id="goal-bar-fill"></div></div>
+        <span id="goal-label">0 / 8</span>
+      </div>
+    </div>
+
     <!-- Controls -->
     <div id="controls">
       <button id="btn-start" class="btn-primary">Start</button>
@@ -144,6 +153,10 @@
               <span>Break</span>
               <input type="range" id="set-opacity-break" min="0.3" max="1" step="0.05" value="1">
             </div>
+            <div class="setting-row checkbox-row">
+              <span>Light mode</span>
+              <input type="checkbox" id="set-light-mode">
+            </div>
           </div>
         </div>
 
@@ -191,6 +204,50 @@
               <span>Dim when pinned &amp; focusing</span>
               <input type="checkbox" id="set-dim-on-focus" checked>
             </div>
+            <div class="setting-row checkbox-row">
+              <span>Focus lock (block skip)</span>
+              <input type="checkbox" id="set-focus-lock">
+            </div>
+            <div class="setting-row checkbox-row">
+              <span>Close to tray</span>
+              <input type="checkbox" id="set-close-to-tray" checked>
+            </div>
+            <div class="setting-row checkbox-row">
+              <span>Launch on startup</span>
+              <input type="checkbox" id="set-startup">
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Ambient Sound</label>
+            <div class="setting-row">
+              <span>Type</span>
+              <select id="set-ambient-sound" class="setting-select">
+                <option value="none">None</option>
+                <option value="rain">Rain</option>
+                <option value="whitenoise">White Noise</option>
+                <option value="lofi">Lo-fi</option>
+                <option value="cafe">Cafe</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <span>Volume</span>
+              <input type="range" id="set-ambient-volume" min="0" max="1" step="0.05" value="0.3">
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Daily Goal</label>
+            <div class="setting-row">
+              <span>Focus sessions</span>
+              <input type="number" id="set-daily-goal" min="1" max="20" value="8">
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Data</label>
+            <button id="btn-export-csv" class="btn-secondary btn-small">Export CSV</button>
+            <button id="btn-export-json" class="btn-secondary btn-small" style="margin-left:8px">Export JSON</button>
           </div>
 
           <div class="setting-group">
@@ -227,6 +284,12 @@
   </div>
 
   <script src="app.js"></script>
+
+  <!-- Focus lock overlay -->
+  <div id="focus-lock-overlay" class="lock-hidden">
+    <div id="focus-lock-timer">25:00</div>
+    <div id="focus-lock-label">Focus Mode</div>
+  </div>
 
   <!-- Update toast -->
   <div id="update-toast" class="toast-hidden">

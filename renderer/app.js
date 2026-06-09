@@ -62,6 +62,117 @@ const PHRASES = {
   ]
 }
 
+// ── Audio Engine ──────────────────────────────
+const AudioContext = window.AudioContext || window.webkitAudioContext
+let audioCtx = null
+
+// ── Ambient Sound Presets ─────────────────────
+const AMBIENT_PRESETS = {
+  rain: (ctx, gainNode) => {
+    const bufferSize = ctx.sampleRate * 2
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 500
+    source.connect(filter)
+    filter.connect(gainNode)
+    source.start()
+    return [source, filter]
+  },
+  whitenoise: (ctx, gainNode) => {
+    const bufferSize = ctx.sampleRate * 2
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    source.connect(gainNode)
+    source.start()
+    return [source]
+  },
+  lofi: (ctx, gainNode) => {
+    const freqs = [261.63, 329.63, 392.00, 523.25]
+    const nodes = []
+    freqs.forEach(freq => {
+      const osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      const g = ctx.createGain()
+      g.gain.value = 0.15
+      osc.connect(g)
+      g.connect(gainNode)
+      osc.start()
+      nodes.push(osc, g)
+    })
+    return nodes
+  },
+  cafe: (ctx, gainNode) => {
+    const bufferSize = ctx.sampleRate * 2
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    let lastOut = 0
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1
+      data[i] = (lastOut + (0.02 * white)) / 1.02
+      lastOut = data[i]
+      data[i] *= 2.5
+    }
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 600
+    source.connect(filter)
+    filter.connect(gainNode)
+    source.start()
+    return [source, filter]
+  }
+}
+
+let ambientNodes = []
+let ambientGain = null
+
+function startAmbientSound(preset, volume) {
+  if (!audioCtx) audioCtx = new AudioContext()
+  stopAmbientSound()
+  if (preset === 'none' || !AMBIENT_PRESETS[preset]) return
+  ambientGain = audioCtx.createGain()
+  ambientGain.gain.value = Math.min(1, Math.max(0, volume))
+  ambientGain.connect(audioCtx.destination)
+  ambientNodes = AMBIENT_PRESETS[preset](audioCtx, ambientGain)
+}
+
+function stopAmbientSound() {
+  if (ambientNodes.length > 0) {
+    ambientNodes.forEach(node => {
+      try { node.stop() } catch (_) { /* already stopped */ }
+      try { node.disconnect() } catch (_) {}
+    })
+    ambientNodes = []
+  }
+  if (ambientGain) {
+    try { ambientGain.disconnect() } catch (_) {}
+    ambientGain = null
+  }
+}
+
+function setAmbientVolume(vol) {
+  if (ambientGain) {
+    ambientGain.gain.value = Math.min(1, Math.max(0, vol))
+  }
+}
+
 // ── Default Settings ──────────────────────────
 const DEFAULTS = {
   focusDuration: 25,
@@ -79,7 +190,14 @@ const DEFAULTS = {
   dimOnFocus: true,
   opacityIdle: 1.0,
   opacityFocus: 0.4,
-  opacityBreak: 1.0
+  opacityBreak: 1.0,
+  lightMode: false,
+  focusLock: false,
+  closeToTray: true,
+  startup: false,
+  ambientSound: 'none',
+  ambientVolume: 0.3,
+  dailyGoal: 8
 }
 
 // ── History ────────────────────────────────────
@@ -103,6 +221,7 @@ function logSession(type, durationMins) {
   const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000
   saveHistory(history.filter(h => h.completedAt > cutoff))
   updateStats()
+  updateGoalBar()
 }
 
 function getStats() {
@@ -155,10 +274,84 @@ function updateStats() {
   if (ss) ss.textContent = stats.streak
 }
 
-// ── Sounds ────────────────────────────────────
-const AudioContext = window.AudioContext || window.webkitAudioContext
-let audioCtx = null
+// ── Goal Bar ───────────────────────────────────
+function updateGoalBar() {
+  const stats = getStats()
+  const goal = state.settings.dailyGoal || 8
+  const pct = Math.min(100, Math.round((stats.today / goal) * 100))
+  if (dom.goalBarFill) {
+    dom.goalBarFill.style.width = pct + '%'
+  }
+  if (dom.goalLabel) {
+    dom.goalLabel.textContent = stats.today + ' / ' + goal + ' sessions'
+  }
+}
 
+// ── Focus Lock ─────────────────────────────────
+function showLockOverlay() {
+  if (dom.lockOverlay) {
+    dom.lockOverlay.classList.remove('lock-hidden')
+  }
+}
+
+function hideLockOverlay() {
+  if (dom.lockOverlay) {
+    dom.lockOverlay.classList.add('lock-hidden')
+  }
+}
+
+function updateLockTimer() {
+  if (dom.lockTimer) {
+    const mins = Math.floor(state.timeLeft / 60)
+    const secs = state.timeLeft % 60
+    dom.lockTimer.textContent =
+      String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0')
+  }
+}
+
+function updateSkipButtonState() {
+  if (dom.btnSkip) {
+    dom.btnSkip.disabled = state.settings.focusLock && state.mode === 'focus'
+  }
+}
+
+// ── Task Input ─────────────────────────────────
+function loadTask() {
+  try {
+    return localStorage.getItem('pomini-task') || ''
+  } catch (_) { return '' }
+}
+
+function saveTask(text) {
+  localStorage.setItem('pomini-task', text)
+}
+
+// ── Export ─────────────────────────────────────
+function exportHistory(format) {
+  const history = loadHistory()
+  let data
+  if (format === 'csv') {
+    const header = 'Type,Duration (min),Completed At'
+    const rows = history.map(h => {
+      return h.type + ',' + h.duration + ',' + new Date(h.completedAt).toISOString()
+    })
+    data = header + '\n' + rows.join('\n')
+  } else {
+    data = JSON.stringify(history, null, 2)
+  }
+  window.pomini.exportData(format, data)
+}
+
+// ── Sync to Main ───────────────────────────────
+function syncToMain() {
+  window.pomini.syncTimerState({
+    running: state.running,
+    timeLeft: state.timeLeft,
+    mode: state.mode
+  })
+}
+
+// ── Sounds ────────────────────────────────────
 function beep(freq, type, duration, vol = 0.08) {
   if (!audioCtx) audioCtx = new AudioContext()
   const osc = audioCtx.createOscillator()
@@ -239,7 +432,23 @@ const dom = {
   setFontUI: $('#set-font-ui'),
   setFontMono: $('#set-font-mono'),
   settingsTabs: $$('.settings-tab'),
-  settingsTabPanels: $$('.settings-tab-panel')
+  settingsTabPanels: $$('.settings-tab-panel'),
+
+  // New elements
+  taskInput: $('#task-input'),
+  goalBarFill: $('#goal-bar-fill'),
+  goalLabel: $('#goal-label'),
+  lockOverlay: $('#focus-lock-overlay'),
+  lockTimer: $('#focus-lock-timer'),
+  setFocusLock: $('#set-focus-lock'),
+  setCloseToTray: $('#set-close-to-tray'),
+  setStartup: $('#set-startup'),
+  setLightMode: $('#set-light-mode'),
+  setAmbientSound: $('#set-ambient-sound'),
+  setAmbientVolume: $('#set-ambient-volume'),
+  setDailyGoal: $('#set-daily-goal'),
+  btnExportCSV: $('#btn-export-csv'),
+  btnExportJSON: $('#btn-export-json')
 }
 
 const circumference = 2 * Math.PI * 90 // r=90
@@ -254,12 +463,22 @@ function init() {
   bindEvents()
   updatePinButton()
   updateStats()
+  updateGoalBar()
   setBodyOpacity(state.settings.opacityIdle)
+  updateSkipButtonState()
+
+  // Load saved task
+  const savedTask = loadTask()
+  if (dom.taskInput) {
+    dom.taskInput.value = savedTask
+  }
 
   // Auto-position window on startup
   if (state.settings.position) {
     window.pomini.setPosition(state.settings.position)
   }
+
+  syncToMain()
 }
 
 function loadSettings() {
@@ -300,6 +519,13 @@ function applySettings() {
     chip.classList.toggle('active', chip.dataset.theme === s.theme)
   })
 
+  // Light mode
+  if (s.lightMode) {
+    dom.body.setAttribute('data-light', 'true')
+  } else {
+    dom.body.removeAttribute('data-light')
+  }
+
   // Update settings form
   dom.setFocus.value = s.focusDuration
   dom.setShortBreak.value = s.shortBreakDuration
@@ -314,6 +540,15 @@ function applySettings() {
   dom.setOpacityFocus.value = s.opacityFocus
   dom.setOpacityBreak.value = s.opacityBreak
 
+  // New settings form fields
+  if (dom.setFocusLock) dom.setFocusLock.checked = s.focusLock
+  if (dom.setCloseToTray) dom.setCloseToTray.checked = s.closeToTray
+  if (dom.setStartup) dom.setStartup.checked = s.startup
+  if (dom.setLightMode) dom.setLightMode.checked = s.lightMode
+  if (dom.setAmbientSound) dom.setAmbientSound.value = s.ambientSound
+  if (dom.setAmbientVolume) dom.setAmbientVolume.value = s.ambientVolume
+  if (dom.setDailyGoal) dom.setDailyGoal.value = s.dailyGoal
+
   // Position chips
   document.querySelectorAll('.pos-chip').forEach(chip => {
     chip.classList.toggle('active', chip.dataset.pos === s.position)
@@ -322,19 +557,30 @@ function applySettings() {
   // Fonts
   document.documentElement.style.setProperty('--font-ui', s.fontUI)
   document.documentElement.style.setProperty('--font-mono', s.fontMono)
-  if (dom.setFontUI[0]) dom.setFontUI[0].value = s.fontUI
-  if (dom.setFontMono[0]) dom.setFontMono[0].value = s.fontMono
+  if (dom.setFontUI && dom.setFontUI.length) {
+    dom.setFontUI[0].value = s.fontUI
+  }
+  if (dom.setFontMono && dom.setFontMono.length) {
+    dom.setFontMono[0].value = s.fontMono
+  }
 
   updateTimerDisplay()
   updateRing(1)
   updateStateUI()
   updatePinButton()
+  updateSkipButtonState()
 }
 
 // ── Events ────────────────────────────────────
 function bindEvents() {
   // Window controls
-  $('#btn-minimize').addEventListener('click', () => window.pomini.minimize())
+  $('#btn-minimize').addEventListener('click', () => {
+    if (state.settings.closeToTray) {
+      window.pomini.hideToTray()
+    } else {
+      window.pomini.minimize()
+    }
+  })
   $('#btn-close').addEventListener('click', () => window.pomini.close())
   dom.btnPin.addEventListener('click', togglePin)
   dom.btnCompact.addEventListener('click', toggleCompact)
@@ -373,6 +619,49 @@ function bindEvents() {
     }
   })
 
+  // New settings inputs
+  if (dom.setFocusLock) dom.setFocusLock.addEventListener('change', () => {
+    updateSetting('focusLock', dom.setFocusLock.checked)
+    updateSkipButtonState()
+    if (!dom.setFocusLock.checked) hideLockOverlay()
+    if (dom.setFocusLock.checked && state.running && state.mode === 'focus') showLockOverlay()
+  })
+  if (dom.setCloseToTray) dom.setCloseToTray.addEventListener('change', () => updateSetting('closeToTray', dom.setCloseToTray.checked))
+  if (dom.setStartup) dom.setStartup.addEventListener('change', () => updateSetting('startup', dom.setStartup.checked))
+  if (dom.setLightMode) dom.setLightMode.addEventListener('change', () => {
+    updateSetting('lightMode', dom.setLightMode.checked)
+    if (dom.setLightMode.checked) {
+      dom.body.setAttribute('data-light', 'true')
+    } else {
+      dom.body.removeAttribute('data-light')
+    }
+  })
+  if (dom.setAmbientSound) dom.setAmbientSound.addEventListener('change', () => {
+    updateSetting('ambientSound', dom.setAmbientSound.value)
+    if (state.running && state.mode === 'focus') {
+      if (dom.setAmbientSound.value === 'none') {
+        stopAmbientSound()
+      } else {
+        startAmbientSound(dom.setAmbientSound.value, state.settings.ambientVolume)
+      }
+    }
+  })
+  if (dom.setAmbientVolume) dom.setAmbientVolume.addEventListener('input', () => {
+    updateSetting('ambientVolume', parseFloat(dom.setAmbientVolume.value))
+    setAmbientVolume(parseFloat(dom.setAmbientVolume.value))
+  })
+  if (dom.setDailyGoal) dom.setDailyGoal.addEventListener('change', () => {
+    updateSetting('dailyGoal', parseInt(dom.setDailyGoal.value))
+    updateGoalBar()
+  })
+
+  // Export buttons
+  if (dom.btnExportCSV) dom.btnExportCSV.addEventListener('click', () => exportHistory('csv'))
+  if (dom.btnExportJSON) dom.btnExportJSON.addEventListener('click', () => exportHistory('json'))
+
+  // Task input
+  if (dom.taskInput) dom.taskInput.addEventListener('input', () => saveTask(dom.taskInput.value))
+
   // Theme chips
   dom.themeOptions.addEventListener('click', (e) => {
     const chip = e.target.closest('.theme-chip')
@@ -384,8 +673,12 @@ function bindEvents() {
   })
 
   // Font selects
-  dom.setFontUI.addEventListener('change', () => updateSetting('fontUI', dom.setFontUI.value))
-  dom.setFontMono.addEventListener('change', () => updateSetting('fontMono', dom.setFontMono.value))
+  if (dom.setFontUI && dom.setFontUI.addEventListener) {
+    dom.setFontUI.addEventListener('change', () => updateSetting('fontUI', dom.setFontUI.value))
+  }
+  if (dom.setFontMono && dom.setFontMono.addEventListener) {
+    dom.setFontMono.addEventListener('change', () => updateSetting('fontMono', dom.setFontMono.value))
+  }
 
   // Settings tabs
   dom.settingsTabs.forEach(tab => {
@@ -407,6 +700,7 @@ function bindEvents() {
   dom.btnClearHistory.addEventListener('click', () => {
     saveHistory([])
     updateStats()
+    updateGoalBar()
   })
 
   // Keyboard shortcut: Space to toggle
@@ -416,6 +710,14 @@ function bindEvents() {
       toggleTimer()
     }
   })
+
+  // Global shortcut listeners from main process
+  if (window.pomini.onShortcut && window.pomini.onShortcut.toggle) {
+    window.pomini.onShortcut.toggle(() => toggleTimer())
+  }
+  if (window.pomini.onShortcut && window.pomini.onShortcut.skip) {
+    window.pomini.onShortcut.skip(() => skipSession())
+  }
 }
 
 // ── Update Setting ───────────────────────────
@@ -515,10 +817,22 @@ function startTimer() {
     setBodyOpacity(state.settings.opacityBreak)
   }
 
+  // Ambient sound
+  if (state.mode === 'focus' && state.settings.ambientSound !== 'none') {
+    startAmbientSound(state.settings.ambientSound, state.settings.ambientVolume)
+  }
+
+  // Focus lock overlay
+  if (state.mode === 'focus' && state.settings.focusLock) {
+    showLockOverlay()
+  }
+  updateSkipButtonState()
+
   if (state.settings.sound) playStartChime()
 
   state.intervalId = setInterval(tick, 1000)
   tick() // immediate first tick
+  syncToMain()
 }
 
 function pauseTimer() {
@@ -528,6 +842,8 @@ function pauseTimer() {
   state.intervalId = null
   dom.btnStart.textContent = 'Resume'
   setBodyOpacity(state.settings.opacityIdle)
+  stopAmbientSound()
+  syncToMain()
 }
 
 function tick() {
@@ -541,11 +857,14 @@ function tick() {
 
   updateTimerDisplay()
   updateRing(state.timeLeft / state.totalTime)
+  updateLockTimer()
 
   // Tick sound on last 3 seconds
   if (state.timeLeft <= 3 && state.timeLeft > 0 && state.settings.sound) {
     playTick()
   }
+
+  syncToMain()
 }
 
 function completeSession() {
@@ -557,6 +876,9 @@ function completeSession() {
   updateTimerDisplay()
   updateRing(0)
   setBodyOpacity(1.0)
+
+  stopAmbientSound()
+  hideLockOverlay()
 
   if (state.settings.sound) playEndChime()
 
@@ -595,6 +917,7 @@ function completeSession() {
 
   updateStateUI()
   setRandomPhrase()
+  updateSkipButtonState()
 
   // Auto-start
   const shouldAutoStart =
@@ -604,9 +927,16 @@ function completeSession() {
   if (shouldAutoStart) {
     setTimeout(() => startTimer(), 600)
   }
+
+  syncToMain()
 }
 
 function skipSession() {
+  if (state.settings.focusLock && state.mode === 'focus') {
+    showLockOverlay()
+    return
+  }
+
   const wasFocus = state.mode === 'focus'
 
   if (state.running) {
@@ -616,6 +946,8 @@ function skipSession() {
   state.running = false
   dom.btnStart.textContent = 'Start'
   setBodyOpacity(1.0)
+  stopAmbientSound()
+  hideLockOverlay()
 
   if (state.mode === 'focus') {
     if (state.sessionsCompleted % state.settings.sessionsBeforeLongBreak === 0 && state.sessionsCompleted > 0) {
@@ -632,6 +964,7 @@ function skipSession() {
   updateTimerDisplay()
   updateRing(1)
   setRandomPhrase()
+  updateSkipButtonState()
 
   // Auto-start next session after skip
   const shouldAutoStart =
@@ -641,6 +974,8 @@ function skipSession() {
   if (shouldAutoStart) {
     setTimeout(() => startTimer(), 500)
   }
+
+  syncToMain()
 }
 
 function resetCurrentModeTime() {
@@ -660,12 +995,14 @@ function resetCurrentModeTime() {
   }
   updateTimerDisplay()
   updateRing(1)
+  updateLockTimer()
 }
 
 function setMode(mode) {
   state.mode = mode
   resetCurrentModeTime()
   dom.body.setAttribute('data-state', mode)
+  updateSkipButtonState()
 }
 
 // ── UI Updates ────────────────────────────────
@@ -731,6 +1068,13 @@ function resetSettings() {
   updateTimerDisplay()
   updateRing(1)
   setRandomPhrase()
+  updateGoalBar()
+
+  if (state.settings.focusLock && state.running && state.mode === 'focus') {
+    showLockOverlay()
+  } else {
+    hideLockOverlay()
+  }
   closeSettings()
 }
 

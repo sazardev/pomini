@@ -4,16 +4,34 @@ contextBridge.exposeInMainWorld('pomini', {
   // Window
   minimize: () => ipcRenderer.invoke('window:minimize'),
   close: () => ipcRenderer.invoke('window:close'),
+  hideToTray: () => ipcRenderer.invoke('window:hide-to-tray'),
   togglePin: (pin) => ipcRenderer.invoke('window:toggle-pin', pin),
   setCompact: (compact) => ipcRenderer.invoke('window:set-compact', compact),
   isPinned: () => ipcRenderer.invoke('window:is-pinned'),
   setOpacity: (opacity) => ipcRenderer.invoke('window:set-opacity', opacity),
   setPosition: (preset) => ipcRenderer.invoke('window:set-position', preset),
   getOpacity: () => ipcRenderer.invoke('window:get-opacity'),
+  saveBounds: () => ipcRenderer.invoke('window:save-bounds'),
+
+  // Timer state sync (for tray)
+  syncTimerState: (state) => ipcRenderer.invoke('timer:state-update', state),
+
+  // Startup
+  setStartup: (enable) => ipcRenderer.invoke('app:set-startup', enable),
+  getStartup: () => ipcRenderer.invoke('app:get-startup'),
+
+  // Export
+  exportData: (format, data) => ipcRenderer.invoke('app:export', { format, data }),
 
   // Notifications
   notify: (title, body) =>
     ipcRenderer.invoke('notify:send', { title, body }),
+
+  // Global shortcuts (from main → renderer)
+  onShortcut: {
+    toggle: (cb) => ipcRenderer.on('shortcut:toggle', () => cb()),
+    skip: (cb) => ipcRenderer.on('shortcut:skip', () => cb())
+  },
 
   // Updates
   update: {

@@ -811,4 +811,174 @@ body.compact #titlebar-label {
   font-size: 10px;
 }
 
+/* ── Task Input ──────────────────────────────────────────── */
+#task-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+#task-input {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 400;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  outline: none;
+  width: 100%;
+  text-align: center;
+  transition: border-color var(--transition);
+}
+
+#task-input::placeholder {
+  color: var(--fg-tertiary);
+}
+
+#task-input:focus {
+  border-color: var(--accent);
+}
+
+body.compact #task-container { display: none; }
+
+/* ── Goal Bar ────────────────────────────────────────────── */
+#goal-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+#goal-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--ring-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#goal-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  width: 0%;
+}
+
+#goal-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-tertiary);
+  white-space: nowrap;
+}
+
+/* ── Focus Lock Overlay ──────────────────────────────────── */
+#focus-lock-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.92);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+#focus-lock-overlay.lock-hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+#focus-lock-timer {
+  font-family: var(--font-mono);
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: 0.06em;
+}
+
+#focus-lock-label {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+
+/* ── Light Mode ──────────────────────────────────────────── */
+[data-light="true"] #settings-panel {
+  background: var(--bg, #f0f0f0);
+}
+
+[data-light="true"] .setting-row input[type="number"],
+[data-light="true"] .setting-select {
+  background: var(--bg, #f0f0f0);
+  border-color: var(--border, #ccc);
+}
+
+[data-light="true"] #focus-lock-overlay {
+  background: rgba(255,255,255,0.95);
+}
+
+/* ── Light theme overrides ──────────────────────────────── */
+[data-light="true"][data-theme="mono"] {
+  --bg: #f5f5f5; --bg-secondary: #e8e8e8; --bg-tertiary: #ddd;
+  --fg: #1a1a1a; --fg-secondary: #555; --fg-tertiary: #999;
+  --accent: #1a1a1a; --accent-dim: #666;
+  --border: #ccc; --ring-bg: #e0e0e0;
+}
+
+[data-light="true"][data-theme="gruvbox"] {
+  --bg: #fbf1c7; --bg-secondary: #f2e5bc; --bg-tertiary: #ebdbb2;
+  --fg: #3c3836; --fg-secondary: #7c6f64; --fg-tertiary: #bdae93;
+  --accent: #b57614; --accent-dim: #d79921;
+  --border: #d5c4a1; --ring-bg: #ebdbb2;
+}
+
+[data-light="true"][data-theme="nord"] {
+  --bg: #eceff4; --bg-secondary: #e5e9f0; --bg-tertiary: #d8dee9;
+  --fg: #2e3440; --fg-secondary: #4c566a; --fg-tertiary: #81a1c1;
+  --accent: #5e81ac; --accent-dim: #81a1c1;
+  --border: #d8dee9; --ring-bg: #e5e9f0;
+}
+
+[data-light="true"][data-theme="catppuccin"] {
+  --bg: #eff1f5; --bg-secondary: #e6e9ef; --bg-tertiary: #ccd0da;
+  --fg: #4c4f69; --fg-secondary: #5c5f77; --fg-tertiary: #9ca0b0;
+  --accent: #8839ef; --accent-dim: #7287fd;
+  --border: #ccd0da; --ring-bg: #e6e9ef;
+}
+
+[data-light="true"][data-theme="dracula"] {
+  --bg: #f8f8f2; --bg-secondary: #f0f0ea; --bg-tertiary: #e0e0da;
+  --fg: #282a36; --fg-secondary: #6272a4; --fg-tertiary: #bd93f9;
+  --accent: #50fa7b; --accent-dim: #8be9fd;
+  --border: #ddd; --ring-bg: #eee;
+}
+
+[data-light="true"][data-theme="onedark"] {
+  --bg: #fafafa; --bg-secondary: #f0f0f5; --bg-tertiary: #e0e0e8;
+  --fg: #383a42; --fg-secondary: #696c77; --fg-tertiary: #a0a1a7;
+  --accent: #4078f2; --accent-dim: #a626a4;
+  --border: #ddd; --ring-bg: #eee;
+}
+
+[data-light="true"][data-theme="slate"] {
+  --bg: #f0f6fc; --bg-secondary: #e0e8f0; --bg-tertiary: #d0d8e0;
+  --fg: #0d1117; --fg-secondary: #484f58; --fg-tertiary: #8b949e;
+  --accent: #0969da; --accent-dim: #58a6ff;
+  --border: #d0d7de; --ring-bg: #e0e8f0;
+}
+
 
