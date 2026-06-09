@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       bump:
@@ -24,8 +24,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.bump.outputs.version }}
-      tag: ${{ steps.bump.outputs.tag }}
+      new_version: ${{ steps.bump.outputs.new_version }}
+      new_tag: ${{ steps.bump.outputs.new_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,18 +45,25 @@ jobs:
         id: bump
         run: |
           node scripts/bump-version.js ${{ inputs.bump }}
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          V=$(node -p "require('./package.json').version")
+          echo "new_version=${V}" >> $GITHUB_OUTPUT
+          echo "new_tag=v${V}" >> $GITHUB_OUTPUT
 
   build:
     needs: version
-    if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
+    if: |
+      always() &&
+      (needs.version.result == 'success' || needs.version.result == 'skipped')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Pull latest (if version job pushed)
+        if: github.event_name == 'workflow_dispatch'
+        run: git pull origin ${{ github.ref_name }}
 
       - uses: actions/setup-node@v4
         with:
@@ -65,10 +72,17 @@ jobs:
       - name: Generate icon
         run: node scripts/generate-icon.js
 
+      - name: Read version
+        id: read_version
+        shell: pwsh
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          echo "pkg_version=$($pkg.version)" >> $env:GITHUB_OUTPUT
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Build installer
+      - name: Build
         run: npx electron-builder build --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,62 +90,74 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pomini-installer
+          name: release-files
           path: |
             dist/*.exe
             dist/*.blockmap
-            dist/*.yml
-          retention-days: 7
+            dist/latest.yml
+          retention-days: 1
 
   release:
-    needs: build
+    needs: [version, build]
+    if: |
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.version.result == 'success' || needs.version.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version & tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ needs.version.outputs.new_version }}"
+            TAG="${{ needs.version.outputs.new_tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            VER="${TAG#v}"
+          fi
+          echo "version=${VER}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "::notice title=Release::Building release for ${TAG} (version ${VER})"
 
       - uses: actions/download-artifact@v4
         with:
-          name: pomini-installer
+          name: release-files
           path: dist
-
-      - name: Get version
-        id: ver
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ needs.version.outputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/v}"
-          fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         id: notes
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            NOTES=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+          PREV_TAG=$(git tag --sort=-creatordate | grep -A1 "${{ steps.meta.outputs.tag }}" | tail -1 || true)
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "${{ steps.meta.outputs.tag }}" ]; then
+            LOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges 2>/dev/null || echo "")
           else
-            NOTES=$(git log --pretty=format:"- %s" --no-merges)
+            LOG=$(git log --pretty=format:"- %s" --no-merges -20)
           fi
-          printf 'NOTES<<EOF\n%s\nEOF' "$NOTES" >> $GITHUB_OUTPUT
+          if [ -z "$LOG" ]; then LOG="- Initial release"; fi
+          printf 'NOTES<<EOF\n%s\nEOF' "$LOG" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.ver.outputs.version }}
-          name: Pomini v${{ steps.ver.outputs.version }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Pomini ${{ steps.meta.outputs.version }}
           body: |
             ## Changes
             ${{ steps.notes.outputs.NOTES }}
 
             ## Download
-            - **Pomini-Setup-${{ steps.ver.outputs.version }}.exe** — Installer with desktop shortcut
-            - **Pomini-Portable-${{ steps.ver.outputs.version }}.exe** — Portable, no install needed
+            - **Pomini-Setup-${{ steps.meta.outputs.version }}.exe** — Installer (auto-update ready)
+            - **Pomini-Portable-${{ steps.meta.outputs.version }}.exe** — Portable, no install
           files: |
             dist/*.exe
             dist/*.yml
             dist/*.blockmap
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
