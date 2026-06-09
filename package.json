@@ -1,6 +1,6 @@
 {
   "name": "pomini",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A beautiful monochromatic pomodoro timer — minimal, motivational, pineable",
   "main": "main.js",
   "author": "pomini",
