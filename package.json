@@ -3,13 +3,59 @@
   "version": "1.0.0",
   "description": "A beautiful monochromatic pomodoro timer — minimal, motivational, pineable",
   "main": "main.js",
+  "author": "pomini",
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "build": "electron-builder build --win",
+    "build:portable": "electron-builder build --win portable",
+    "dist": "electron-builder build --win --publish never",
+    "bump": "node scripts/bump-version.js",
+    "release": "node scripts/bump-version.js patch && npm run dist"
   },
-  "author": "",
-  "license": "MIT",
+  "build": {
+    "appId": "pomini.app",
+    "productName": "Pomini",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "artifactName": "Pomini-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pomini",
+      "license": "LICENSE"
+    },
+    "portable": {
+      "artifactName": "Pomini-Portable-${version}.${ext}"
+    }
+  },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
   }
 }

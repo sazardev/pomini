@@ -3,7 +3,8 @@ const {
   BrowserWindow,
   ipcMain,
   Notification,
-  screen
+  screen,
+  Menu
 } = require('electron')
 const path = require('path')
 
@@ -60,6 +61,9 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow()
+
+  // Production: remove default menu bar
+  Menu.setApplicationMenu(null)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

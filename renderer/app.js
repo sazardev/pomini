@@ -247,7 +247,13 @@ function init() {
   setRandomPhrase()
   bindEvents()
   updatePinButton()
+  updateStats()
   setBodyOpacity(state.settings.opacityIdle)
+
+  // Auto-position window on startup
+  if (state.settings.position) {
+    window.pomini.setPosition(state.settings.position)
+  }
 }
 
 function loadSettings() {
@@ -538,6 +544,8 @@ function completeSession() {
   if (state.mode === 'focus') {
     state.sessionsCompleted++
     dom.sessionCount.textContent = state.sessionsCompleted
+
+    logSession('focus', state.settings.focusDuration)
 
     if (state.settings.notifications) {
       window.pomini.notify(
