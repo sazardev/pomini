@@ -4,15 +4,21 @@ const {
   ipcMain,
   Notification,
   screen,
-  Menu
+  Menu,
+  dialog
 } = require('electron')
 const path = require('path')
+const { autoUpdater } = require('electron-updater')
 
 app.setAppUserModelId('pomini')
 
 let mainWindow = null
 let isPinned = false
 let currentOpacity = 1.0
+let updateDownloaded = false
+let updateVersion = null
+
+const isDev = !app.isPackaged
 
 function positionWindow(preset) {
   if (!mainWindow || mainWindow.isDestroyed()) return
@@ -62,16 +68,95 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow()
 
-  // Production: remove default menu bar
   Menu.setApplicationMenu(null)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+
+  // Auto-updater
+  if (!isDev) {
+    setupAutoUpdater()
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {
+      // Silent fail — no internet or GitHub unreachable
+    })
+  }
 })
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('checking-for-update', () => {
+    sendToRenderer('update:checking')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    updateVersion = info.version
+    sendToRenderer('update:available', { version: info.version })
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    sendToRenderer('update:not-available')
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    sendToRenderer('update:progress', {
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total
+    })
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    updateDownloaded = true
+    updateVersion = info.version
+    sendToRenderer('update:downloaded', { version: info.version })
+  })
+
+  autoUpdater.on('error', (err) => {
+    sendToRenderer('update:error', { message: err ? err.message : 'Unknown error' })
+  })
+}
+
+function sendToRenderer(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload)
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('before-quit', () => {
+  // Allow auto-updater to install before quitting
+})
+
+// ── Update IPC ────────────────────────────────────────────────
+
+ipcMain.handle('update:check', async () => {
+  if (isDev) return { dev: true }
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    return { available: result && result.updateInfo.version !== app.getVersion() }
+  } catch {
+    return { error: 'check-failed' }
+  }
+})
+
+ipcMain.handle('update:install', () => {
+  if (updateDownloaded) {
+    autoUpdater.quitAndInstall(false, true)
+  }
+})
+
+ipcMain.handle('update:get-status', () => {
+  return {
+    downloaded: updateDownloaded,
+    version: updateVersion,
+    current: app.getVersion()
+  }
 })
 
 // ── IPC Handlers ──────────────────────────────────────────────

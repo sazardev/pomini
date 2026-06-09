@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('pomini', {
+  // Window
   minimize: () => ipcRenderer.invoke('window:minimize'),
   close: () => ipcRenderer.invoke('window:close'),
   togglePin: (pin) => ipcRenderer.invoke('window:toggle-pin', pin),
@@ -9,10 +10,33 @@ contextBridge.exposeInMainWorld('pomini', {
   setOpacity: (opacity) => ipcRenderer.invoke('window:set-opacity', opacity),
   setPosition: (preset) => ipcRenderer.invoke('window:set-position', preset),
   getOpacity: () => ipcRenderer.invoke('window:get-opacity'),
+
+  // Notifications
   notify: (title, body) =>
     ipcRenderer.invoke('notify:send', { title, body }),
-  getSettings: () => ipcRenderer.invoke('settings:get'),
 
-  // Window drag — calls main process
+  // Updates
+  update: {
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    getStatus: () => ipcRenderer.invoke('update:get-status'),
+    onChecking: (cb) => ipcRenderer.on('update:checking', () => cb()),
+    onAvailable: (cb) => ipcRenderer.on('update:available', (_e, info) => cb(info)),
+    onNotAvailable: (cb) => ipcRenderer.on('update:not-available', () => cb()),
+    onProgress: (cb) => ipcRenderer.on('update:progress', (_e, p) => cb(p)),
+    onDownloaded: (cb) => ipcRenderer.on('update:downloaded', (_e, info) => cb(info)),
+    onError: (cb) => ipcRenderer.on('update:error', (_e, err) => cb(err)),
+    removeAllListeners: () => {
+      ipcRenderer.removeAllListeners('update:checking')
+      ipcRenderer.removeAllListeners('update:available')
+      ipcRenderer.removeAllListeners('update:not-available')
+      ipcRenderer.removeAllListeners('update:progress')
+      ipcRenderer.removeAllListeners('update:downloaded')
+      ipcRenderer.removeAllListeners('update:error')
+    }
+  },
+
+  // Misc
+  getSettings: () => ipcRenderer.invoke('settings:get'),
   onDragStart: () => ipcRenderer.send('window:start-drag')
 })

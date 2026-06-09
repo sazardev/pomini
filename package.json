@@ -17,6 +17,11 @@
   "build": {
     "appId": "pomini.app",
     "productName": "Pomini",
+    "publish": {
+      "provider": "github",
+      "owner": "sazardev",
+      "repo": "pomini"
+    },
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -61,5 +66,8 @@
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

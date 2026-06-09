@@ -80,6 +80,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.blockmap
+            dist/*.yml
           retention-days: 7
 
   release:
@@ -126,7 +127,10 @@ jobs:
             ## Download
             - **Pomini-Setup-${{ steps.ver.outputs.version }}.exe** — Installer with desktop shortcut
             - **Pomini-Portable-${{ steps.ver.outputs.version }}.exe** — Portable, no install needed
-          files: dist/*.exe
+          files: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.blockmap
           draft: false
           prerelease: false
         env:

@@ -707,5 +707,66 @@ function resetSettings() {
   closeSettings()
 }
 
+// ── Auto Updates ───────────────────────────────
+function setupAutoUpdates() {
+  const toast = document.getElementById('update-toast')
+  const msg = document.getElementById('update-message')
+  const action = document.getElementById('update-action')
+  const dismiss = document.getElementById('update-dismiss')
+
+  if (!toast || !msg || !action || !dismiss) return
+
+  let isVisible = false
+
+  function show(text, btnLabel, btnAction) {
+    msg.textContent = text
+    action.textContent = btnLabel
+    action.style.display = btnAction ? '' : 'none'
+    action.onclick = btnAction || null
+    dismiss.style.display = btnAction ? '' : 'none'
+    toast.classList.remove('toast-hidden')
+    isVisible = true
+  }
+
+  function hide() {
+    toast.classList.add('toast-hidden')
+    isVisible = false
+  }
+
+  dismiss.addEventListener('click', hide)
+
+  window.pomini.update.onChecking(() => {
+    show('Checking for updates...', '', null)
+  })
+
+  window.pomini.update.onAvailable((info) => {
+    show(`v${info.version} available — downloading...`, '', null)
+  })
+
+  window.pomini.update.onNotAvailable(() => {
+    show('You are up to date', '', null)
+    setTimeout(hide, 2500)
+  })
+
+  window.pomini.update.onProgress((p) => {
+    if (isVisible) {
+      msg.textContent = `Downloading... ${p.percent}%`
+    }
+  })
+
+  window.pomini.update.onDownloaded((info) => {
+    show(`v${info.version} ready! Restart to update.`, 'Install & Restart', () => {
+      window.pomini.update.install()
+    })
+  })
+
+  window.pomini.update.onError((err) => {
+    show(`Update error: ${err.message || 'check failed'}`, 'Retry', () => {
+      window.pomini.update.check()
+    })
+  })
+}
+
 // ── Start ─────────────────────────────────────
 init()
+setupAutoUpdates()
