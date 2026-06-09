@@ -6,7 +6,7 @@
   <title>pomini</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=General+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=General+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-state="idle" data-theme="mono">
@@ -81,107 +81,145 @@
     </div>
 
     <div id="settings-content">
-      <!-- Durations -->
-      <div class="setting-group">
-        <label class="setting-label">Durations (minutes)</label>
-        <div class="setting-row">
-          <span>Focus</span>
-          <input type="number" id="set-focus" min="1" max="120" value="25">
-        </div>
-        <div class="setting-row">
-          <span>Short Break</span>
-          <input type="number" id="set-short-break" min="1" max="30" value="5">
-        </div>
-        <div class="setting-row">
-          <span>Long Break</span>
-          <input type="number" id="set-long-break" min="1" max="60" value="15">
-        </div>
-        <div class="setting-row">
-          <span>Sessions before long break</span>
-          <input type="number" id="set-sessions-before-long" min="1" max="10" value="4">
-        </div>
+      <!-- Tabs -->
+      <div id="settings-tabs">
+        <button class="settings-tab active" data-tab="appearance">Appearance</button>
+        <button class="settings-tab" data-tab="pomodoro">Pomodoro</button>
+        <button class="settings-tab" data-tab="stats">Stats</button>
       </div>
 
-      <!-- Theme -->
-      <div class="setting-group">
-        <label class="setting-label">Theme</label>
-        <div id="theme-options">
-          <button class="theme-chip active" data-theme="mono">Mono</button>
-          <button class="theme-chip" data-theme="sepia">Sepia</button>
-          <button class="theme-chip" data-theme="slate">Slate</button>
-          <button class="theme-chip" data-theme="amber">Amber</button>
-          <button class="theme-chip" data-theme="verde">Verde</button>
-          <button class="theme-chip" data-theme="rose">Rose</button>
-          <button class="theme-chip" data-theme="ocean">Ocean</button>
-        </div>
-      </div>
+      <div id="settings-tab-content">
+        <!-- Appearance Tab -->
+        <div class="settings-tab-panel active" id="tab-appearance">
+          <div class="setting-group">
+            <label class="setting-label">Theme</label>
+            <div id="theme-options">
+              <button class="theme-chip active" data-theme="mono">Mono</button>
+              <button class="theme-chip" data-theme="gruvbox">Gruvbox</button>
+              <button class="theme-chip" data-theme="nord">Nord</button>
+              <button class="theme-chip" data-theme="catppuccin">Catppuccin</button>
+              <button class="theme-chip" data-theme="dracula">Dracula</button>
+              <button class="theme-chip" data-theme="onedark">One Dark</button>
+              <button class="theme-chip" data-theme="slate">Slate</button>
+              <button class="theme-chip" data-theme="amber">Amber</button>
+              <button class="theme-chip" data-theme="verde">Verde</button>
+              <button class="theme-chip" data-theme="rose">Rose</button>
+              <button class="theme-chip" data-theme="sepia">Sepia</button>
+              <button class="theme-chip" data-theme="ocean">Ocean</button>
+            </div>
+          </div>
 
-      <!-- Behavior -->
-      <div class="setting-group">
-        <label class="setting-label">Behavior</label>
-        <div class="setting-row checkbox-row">
-          <span>Auto-start breaks</span>
-          <input type="checkbox" id="set-auto-start-breaks" checked>
-        </div>
-        <div class="setting-row checkbox-row">
-          <span>Auto-start focus</span>
-          <input type="checkbox" id="set-auto-start-focus">
-        </div>
-        <div class="setting-row checkbox-row">
-          <span>Notifications</span>
-          <input type="checkbox" id="set-notifications" checked>
-        </div>
-        <div class="setting-row checkbox-row">
-          <span>Sound alerts</span>
-          <input type="checkbox" id="set-sound" checked>
-        </div>
-        <div class="setting-row checkbox-row">
-          <span>Dim when pinned & focusing</span>
-          <input type="checkbox" id="set-dim-on-focus" checked>
-        </div>
-      </div>
+          <div class="setting-group">
+            <label class="setting-label">Font</label>
+            <div class="setting-row">
+              <span>UI Font</span>
+              <select id="set-font-ui" class="setting-select">
+                <option value="'General Sans', 'Inter', sans-serif">General Sans</option>
+                <option value="'Inter', sans-serif">Inter</option>
+                <option value="system-ui, sans-serif">System</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <span>Timer Font</span>
+              <select id="set-font-mono" class="setting-select">
+                <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                <option value="'Fira Code', monospace">Fira Code</option>
+                <option value="'Cascadia Code', monospace">Cascadia Code</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+          </div>
 
-      <!-- Opacity -->
-      <div class="setting-group">
-        <label class="setting-label">Opacity</label>
-        <div class="setting-row">
-          <span>Idle</span>
-          <input type="range" id="set-opacity-idle" min="0.3" max="1" step="0.05" value="1">
+          <div class="setting-group">
+            <label class="setting-label">Opacity</label>
+            <div class="setting-row">
+              <span>Idle</span>
+              <input type="range" id="set-opacity-idle" min="0.3" max="1" step="0.05" value="1">
+            </div>
+            <div class="setting-row">
+              <span>Focus (dimmed)</span>
+              <input type="range" id="set-opacity-focus" min="0.2" max="1" step="0.05" value="0.4">
+            </div>
+            <div class="setting-row">
+              <span>Break</span>
+              <input type="range" id="set-opacity-break" min="0.3" max="1" step="0.05" value="1">
+            </div>
+          </div>
         </div>
-        <div class="setting-row">
-          <span>Focus (dimmed)</span>
-          <input type="range" id="set-opacity-focus" min="0.2" max="1" step="0.05" value="0.4">
-        </div>
-        <div class="setting-row">
-          <span>Break</span>
-          <input type="range" id="set-opacity-break" min="0.3" max="1" step="0.05" value="1">
-        </div>
-      </div>
 
-      <!-- Position -->
-      <div class="setting-group">
-        <label class="setting-label">Window Position</label>
-        <div id="position-options">
-          <button class="pos-chip" data-pos="top-left">↖ TL</button>
-          <button class="pos-chip" data-pos="top-center">↑ TC</button>
-          <button class="pos-chip active" data-pos="top-right">↗ TR</button>
-          <button class="pos-chip" data-pos="bottom-left">↙ BL</button>
-          <button class="pos-chip" data-pos="bottom-center">↓ BC</button>
-          <button class="pos-chip" data-pos="bottom-right">↘ BR</button>
-          <button class="pos-chip" data-pos="center">⊙ C</button>
-        </div>
-      </div>
+        <!-- Pomodoro Tab -->
+        <div class="settings-tab-panel" id="tab-pomodoro">
+          <div class="setting-group">
+            <label class="setting-label">Durations (minutes)</label>
+            <div class="setting-row">
+              <span>Focus</span>
+              <input type="number" id="set-focus" min="1" max="120" value="25">
+            </div>
+            <div class="setting-row">
+              <span>Short Break</span>
+              <input type="number" id="set-short-break" min="1" max="30" value="5">
+            </div>
+            <div class="setting-row">
+              <span>Long Break</span>
+              <input type="number" id="set-long-break" min="1" max="60" value="15">
+            </div>
+            <div class="setting-row">
+              <span>Sessions before long break</span>
+              <input type="number" id="set-sessions-before-long" min="1" max="10" value="4">
+            </div>
+          </div>
 
-      <!-- Stats -->
-      <div class="setting-group">
-        <label class="setting-label">Stats</label>
-        <div id="stats-container">
-          <div class="stat-row"><span>Today</span><span id="stat-today">0</span></div>
-          <div class="stat-row"><span>This week</span><span id="stat-week">0</span></div>
-          <div class="stat-row"><span>Total</span><span id="stat-total">0</span></div>
-          <div class="stat-row"><span>Streak (days)</span><span id="stat-streak">0</span></div>
+          <div class="setting-group">
+            <label class="setting-label">Behavior</label>
+            <div class="setting-row checkbox-row">
+              <span>Auto-start breaks</span>
+              <input type="checkbox" id="set-auto-start-breaks" checked>
+            </div>
+            <div class="setting-row checkbox-row">
+              <span>Auto-start focus</span>
+              <input type="checkbox" id="set-auto-start-focus">
+            </div>
+            <div class="setting-row checkbox-row">
+              <span>Notifications</span>
+              <input type="checkbox" id="set-notifications" checked>
+            </div>
+            <div class="setting-row checkbox-row">
+              <span>Sound alerts</span>
+              <input type="checkbox" id="set-sound" checked>
+            </div>
+            <div class="setting-row checkbox-row">
+              <span>Dim when pinned &amp; focusing</span>
+              <input type="checkbox" id="set-dim-on-focus" checked>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Window Position</label>
+            <div id="position-options">
+              <button class="pos-chip" data-pos="top-left">↖ TL</button>
+              <button class="pos-chip" data-pos="top-center">↑ TC</button>
+              <button class="pos-chip active" data-pos="top-right">↗ TR</button>
+              <button class="pos-chip" data-pos="bottom-left">↙ BL</button>
+              <button class="pos-chip" data-pos="bottom-center">↓ BC</button>
+              <button class="pos-chip" data-pos="bottom-right">↘ BR</button>
+              <button class="pos-chip" data-pos="center">⊙ C</button>
+            </div>
+          </div>
         </div>
-        <button id="btn-clear-history" class="btn-secondary btn-small">Clear history</button>
+
+        <!-- Stats Tab -->
+        <div class="settings-tab-panel" id="tab-stats">
+          <div class="setting-group">
+            <label class="setting-label">Sessions Completed</label>
+            <div id="stats-container">
+              <div class="stat-row"><span>Today</span><span id="stat-today">0</span></div>
+              <div class="stat-row"><span>This week</span><span id="stat-week">0</span></div>
+              <div class="stat-row"><span>Total</span><span id="stat-total">0</span></div>
+              <div class="stat-row"><span>Streak (days)</span><span id="stat-streak">0</span></div>
+            </div>
+            <button id="btn-clear-history" class="btn-secondary btn-small">Clear history</button>
+          </div>
+        </div>
       </div>
 
       <button id="btn-reset-settings" class="btn-secondary">Reset to defaults</button>

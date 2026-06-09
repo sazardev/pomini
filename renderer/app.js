@@ -69,6 +69,8 @@ const DEFAULTS = {
   longBreakDuration: 15,
   sessionsBeforeLongBreak: 4,
   theme: 'mono',
+  fontUI: "'General Sans', 'Inter', sans-serif",
+  fontMono: "'JetBrains Mono', monospace",
   position: 'top-right',
   autoStartBreaks: true,
   autoStartFocus: false,
@@ -233,7 +235,11 @@ const dom = {
   btnResetSettings: $('#btn-reset-settings'),
   themeOptions: $('#theme-options'),
   positionOptions: $('#position-options'),
-  btnClearHistory: $('#btn-clear-history')
+  btnClearHistory: $('#btn-clear-history'),
+  setFontUI: $('#set-font-ui'),
+  setFontMono: $('#set-font-mono'),
+  settingsTabs: $$('.settings-tab'),
+  settingsTabPanels: $$('.settings-tab-panel')
 }
 
 const circumference = 2 * Math.PI * 90 // r=90
@@ -313,6 +319,12 @@ function applySettings() {
     chip.classList.toggle('active', chip.dataset.pos === s.position)
   })
 
+  // Fonts
+  document.documentElement.style.setProperty('--font-ui', s.fontUI)
+  document.documentElement.style.setProperty('--font-mono', s.fontMono)
+  if (dom.setFontUI[0]) dom.setFontUI[0].value = s.fontUI
+  if (dom.setFontMono[0]) dom.setFontMono[0].value = s.fontMono
+
   updateTimerDisplay()
   updateRing(1)
   updateStateUI()
@@ -369,6 +381,15 @@ function bindEvents() {
     dom.body.setAttribute('data-theme', chip.dataset.theme)
     document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'))
     chip.classList.add('active')
+  })
+
+  // Font selects
+  dom.setFontUI.addEventListener('change', () => updateSetting('fontUI', dom.setFontUI.value))
+  dom.setFontMono.addEventListener('change', () => updateSetting('fontMono', dom.setFontMono.value))
+
+  // Settings tabs
+  dom.settingsTabs.forEach(tab => {
+    tab.addEventListener('click', () => switchSettingsTab(tab.dataset.tab))
   })
 
   // Position chips
@@ -689,11 +710,17 @@ function setRandomPhrase() {
 // ── Settings Panel ────────────────────────────
 function openSettings() {
   dom.settingsPanel.classList.remove('panel-hidden')
+  updateStats()
 }
 
 function closeSettings() {
   dom.settingsPanel.classList.add('panel-hidden')
   applySettings()
+}
+
+function switchSettingsTab(tabName) {
+  dom.settingsTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName))
+  dom.settingsTabPanels.forEach(p => p.classList.toggle('active', p.id === `tab-${tabName}`))
 }
 
 function resetSettings() {
